@@ -30,7 +30,14 @@
         /// </summary>
         /// <param name="refreshToken">The refresh token.</param>
         /// <returns>A refresh Token</returns>
-        Task<Token> Authenticate(string refreshToken);
+        Task<Token> AuthenticateRefreshToken(string refreshToken);
+        
+        /// <summary>
+        /// Authenticates the specified refresh token.
+        /// </summary>
+        /// <param name="passcode">The refresh token.</param>
+        /// <returns>A refresh Token</returns>
+        Task<Token> AuthenticatePasscode(string passcode);
 
         /// <summary>
         /// Gets the access token.

@@ -1,0 +1,1 @@
+dotnet pack .\src\CloudFoundry.CloudController.Common\CloudFoundry.CloudController.Common.csproj -p:NuspecFile=..\..\cf-dotnet-sdk.nuspec -p:NuspecProperties="version=1.0.0" -p:NuspecBasePath=..\..\artifacts

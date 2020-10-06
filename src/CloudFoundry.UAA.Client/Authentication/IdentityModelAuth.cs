@@ -1,4 +1,9 @@
-﻿namespace CloudFoundry.UAA.Authentication
+﻿using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
+using IdentityModel.Client;
+
+namespace CloudFoundry.UAA.Authentication
 {
     using System;
     using System.Globalization;
@@ -6,30 +11,29 @@
     using CloudFoundry.CloudController.Common.Http;
     using CloudFoundry.UAA;
     using CloudFoundry.UAA.Exceptions;
-    using Thinktecture.IdentityModel.Client;
 
-    internal class ThinkTectureAuth : IAuthentication
+    internal class IdentityModelAuth : IAuthentication
     {
         // CF defaults
         private string oauthClient = "cf";
 
         private string oauthSecret = string.Empty;
         private Uri oauthTarget;
-        private Uri httpProxy;
+        private IWebProxy httpProxy;
         private bool skipCertificateValidation;
         private Token token = new Token();
 
-        internal ThinkTectureAuth(Uri authenticationUri)
+        internal IdentityModelAuth(Uri authenticationUri)
             : this(authenticationUri, null)
         {
         }
 
-        internal ThinkTectureAuth(Uri authenticationUri, Uri httpProxy)
+        internal IdentityModelAuth(Uri authenticationUri, IWebProxy httpProxy)
             : this(authenticationUri, httpProxy, false)
         {
         }
 
-        internal ThinkTectureAuth(Uri authenticationUri, Uri httpProxy, bool skipCertificateValidation)
+        internal IdentityModelAuth(Uri authenticationUri, IWebProxy httpProxy, bool skipCertificateValidation)
         {
             this.oauthTarget = authenticationUri;
             this.httpProxy = httpProxy;
@@ -50,22 +54,27 @@
             {
                 throw new ArgumentNullException("credentials");
             }
-
             using (var httpClientHandler = new AcceptHeaderOverrideHttpClientHandler())
             {
-                if (this.httpProxy != null)
-                {
-                    httpClientHandler.Proxy = new SimpleProxy(this.httpProxy);
-                }
+                this.httpProxy = httpClientHandler.Proxy;
+                
 
                 httpClientHandler.OverrideAcceptHeader = "application/json";
                 httpClientHandler.SkipCertificateValidation = this.skipCertificateValidation;
 
-                var client = new OAuth2Client(this.oauthTarget, this.oauthClient, this.oauthSecret, httpClientHandler);
-
+                var client = new HttpClient(httpClientHandler);
+                var tokenRequest = new PasswordTokenRequest()
+                {
+                    Address = this.oauthTarget.ToString(),
+                    ClientId = this.oauthClient,
+                    ClientSecret = this.oauthSecret,
+                    UserName = credentials.User,
+                    Password = credentials.Password
+                };
+                tokenRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", "Y2Y6");
+                var tokenResponse = await client.RequestPasswordTokenAsync(tokenRequest);
                 this.token.Expires = DateTime.Now;
 
-                var tokenResponse = await client.RequestResourceOwnerPasswordAsync(credentials.User, credentials.Password);
 
                 CheckTokenResponseError(tokenResponse);
 
@@ -84,6 +93,39 @@
             this.token.Expires = this.token.Expires.AddSeconds(tokenResponse.ExpiresIn);
             this.token.AccessToken = tokenResponse.AccessToken;
             this.token.RefreshToken = tokenResponse.RefreshToken;
+
+            return this.token;
+        }
+
+        public async Task<Token> AuthenticatePasscode(string passcode)
+        {
+            using (var httpClientHandler = new AcceptHeaderOverrideHttpClientHandler())
+            {
+                this.httpProxy = httpClientHandler.Proxy;
+
+
+                httpClientHandler.OverrideAcceptHeader = "application/json";
+                httpClientHandler.SkipCertificateValidation = this.skipCertificateValidation;
+
+                var client = new HttpClient(httpClientHandler);
+                var tokenRequest = new TokenRequest()
+                {
+                    Address = this.oauthTarget.ToString(),
+                    ClientId = this.oauthClient,
+                    GrantType = "password",
+                    Parameters = new Dictionary<string, string> { { "passcode", passcode } }
+                };
+                tokenRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", "Y2Y6");
+                var tokenResponse = await client.RequestTokenAsync(tokenRequest);
+                this.token.Expires = DateTime.Now;
+
+
+                CheckTokenResponseError(tokenResponse);
+
+                this.token.AccessToken = tokenResponse.AccessToken;
+                this.token.RefreshToken = tokenResponse.RefreshToken;
+                this.token.Expires = this.token.Expires.AddSeconds(tokenResponse.ExpiresIn);
+            }
 
             return this.token;
         }
@@ -111,14 +153,14 @@
 
         private static void CheckTokenResponseError(TokenResponse tokenResponse)
         {
-            if (tokenResponse.IsHttpError)
+            if (tokenResponse.IsError)
             {
                 throw new AuthenticationException(
                     string.Format(
                     CultureInfo.InvariantCulture,
                     "Unable to connect to target. HTTP Error: {0}. HTTP Error Code {1}",
                     tokenResponse.HttpErrorReason,
-                    tokenResponse.HttpErrorStatusCode));
+                    tokenResponse.HttpStatusCode));
             }
 
             if (tokenResponse.IsError)
@@ -135,16 +177,20 @@
         {
             using (var httpClientHandler = new AcceptHeaderOverrideHttpClientHandler())
             {
-                if (this.httpProxy != null)
-                {
-                    httpClientHandler.Proxy = new SimpleProxy(this.httpProxy);
-                }
+                this.httpProxy = httpClientHandler.Proxy;
+
 
                 httpClientHandler.OverrideAcceptHeader = "application/json";
                 httpClientHandler.SkipCertificateValidation = this.skipCertificateValidation;
-
-                var client = new OAuth2Client(this.oauthTarget, this.oauthClient, this.oauthSecret, httpClientHandler);
-                var tokenResponse = await client.RequestRefreshTokenAsync(refreshToken);
+                var client = new HttpClient(httpClientHandler);
+                
+                var tokenRequest = new RefreshTokenRequest()
+                {
+                    Address = this.oauthTarget.ToString(),
+                    RefreshToken = refreshToken
+                };
+                tokenRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", "Y2Y6");
+                var tokenResponse = await client.RequestRefreshTokenAsync(tokenRequest);
                 CheckTokenResponseError(tokenResponse);
                 return tokenResponse;
             }

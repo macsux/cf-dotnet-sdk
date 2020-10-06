@@ -1,0 +1,30 @@
+<Project>
+  <PropertyGroup>
+    <NeutralLanguage>en</NeutralLanguage>
+    <OutputPath>..\..\artifacts\lib</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+  </PropertyGroup>
+  <!-- <PropertyGroup>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <CodeAnalysisRuleSet>..\..\cf-dotnet-sdk.ruleset</CodeAnalysisRuleSet>
+    <NoWarn />
+    <SourceAnalysisOverrideSettingsFile>$(SolutionDir)\Settings.StyleCop</SourceAnalysisOverrideSettingsFile>
+    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
+  </PropertyGroup> -->
+<!-- 
+  <ItemGroup>
+    <PackageReference Include="StyleCop.MSBuild" Version="4.7.54.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <CodeAnalysisDictionary Include="..\..\cf-dotnet-sdk-dictionary.xml">
+      <Link>cf-dotnet-sdk-dictionary.xml</Link>
+    </CodeAnalysisDictionary>
+  </ItemGroup> -->
+
+</Project>

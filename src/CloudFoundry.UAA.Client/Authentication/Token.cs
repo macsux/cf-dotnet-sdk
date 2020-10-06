@@ -12,6 +12,17 @@
     /// </summary>
     public class Token
     {
+        /// <summary>
+        /// Create token from a string representation
+        /// </summary>
+        /// <param name="accessToken">Access token</param>
+        /// <returns>Token</returns>
+        public static Token FromAccessToken(string accessToken)
+        {
+            var token = new Token();
+            token.AccessToken = accessToken;
+            return token;
+        }
         private string accessToken = null;
 
         /// <summary>
@@ -60,6 +71,7 @@
                 this.UserName = tokenInfo == null ? null : tokenInfo["user_name"];
                 this.Email = tokenInfo == null ? null : tokenInfo["email"];
                 this.UserGuid = tokenInfo == null ? null : tokenInfo["user_id"];
+                this.Expires = new DateTime(1970, 1, 1) + TimeSpan.FromSeconds(int.Parse(tokenInfo["exp"].ToString()));
             }
         }
 

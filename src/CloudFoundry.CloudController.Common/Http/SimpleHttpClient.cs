@@ -1,4 +1,6 @@
-﻿namespace CloudFoundry.CloudController.Common.Http
+﻿using System.Net;
+
+namespace CloudFoundry.CloudController.Common.Http
 {
     using System;
     using System.Collections.Generic;
@@ -95,7 +97,7 @@
         public Uri Uri { get; set; }
 
         /// <inheritdoc/>
-        public Uri HttpProxy { get; set; }
+        public IWebProxy HttpProxy { get; set; }
 
         /// <inheritdoc/>
         public bool SkipCertificateValidation { get; set; }
@@ -180,7 +182,7 @@
 
             if (this.HttpProxy != null)
             {
-                this.handler.Proxy = new SimpleProxy(this.HttpProxy);
+                this.handler.Proxy = this.HttpProxy;
             }
 
             this.handler.SkipCertificateValidation = this.SkipCertificateValidation;

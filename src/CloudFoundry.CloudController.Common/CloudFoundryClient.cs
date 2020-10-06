@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace CloudFoundry.CloudController.Common
 {
     using System;
@@ -27,7 +29,7 @@ namespace CloudFoundry.CloudController.Common
         /// <param name="cloudTarget">The cloud target.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <param name="httpProxy">The HTTP proxy.</param>
-        protected CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, Uri httpProxy)
+        protected CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, IWebProxy httpProxy)
             : this(cloudTarget, cancellationToken, httpProxy, false)
         {
         }
@@ -39,7 +41,7 @@ namespace CloudFoundry.CloudController.Common
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <param name="httpProxy">The HTTP proxy.</param>
         /// <param name="skipCertificateValidation">if set to <c>true</c> it will skip TLS certificate validation for HTTP requests.</param>
-        protected CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, Uri httpProxy, bool skipCertificateValidation)
+        protected CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, IWebProxy httpProxy, bool skipCertificateValidation)
             : this(cloudTarget, cancellationToken, httpProxy, skipCertificateValidation, null)
         {
         }
@@ -52,7 +54,7 @@ namespace CloudFoundry.CloudController.Common
         /// <param name="httpProxy">The HTTP proxy.</param>
         /// <param name="skipCertificateValidation">if set to <c>true</c> it will skip TLS certificate validation for HTTP requests.</param>
         /// <param name="authorizationUrl">Authorization Endpoint</param>
-        protected CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, Uri httpProxy, bool skipCertificateValidation, Uri authorizationUrl)
+        protected CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, IWebProxy httpProxy, bool skipCertificateValidation, Uri authorizationUrl)
             : this(cloudTarget, cancellationToken, httpProxy, skipCertificateValidation, authorizationUrl, false)
         {
         }
@@ -67,7 +69,7 @@ namespace CloudFoundry.CloudController.Common
         /// <param name="authorizationUrl">Authorization Endpoint</param>
         /// <param name="useStrictStatusCodeChecking">Throw exception if the successful http status code returned from the server does not match the expected code</param>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors", Justification = "This method is implemented by sealed cf clients")]
-        protected CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, Uri httpProxy, bool skipCertificateValidation, Uri authorizationUrl, bool useStrictStatusCodeChecking)
+        protected CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, IWebProxy httpProxy, bool skipCertificateValidation, Uri authorizationUrl, bool useStrictStatusCodeChecking)
             : this(cloudTarget, cancellationToken, httpProxy, skipCertificateValidation, authorizationUrl, useStrictStatusCodeChecking, SimpleHttpClient.DefaultTimeout)
         {
         }
@@ -83,7 +85,7 @@ namespace CloudFoundry.CloudController.Common
         /// <param name="useStrictStatusCodeChecking">Throw exception if the successful http status code returned from the server does not match the expected code</param>
         /// <param name="requestTimeout">Http requests timeout</param>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors", Justification = "This method is implemented by sealed cf clients")]
-        protected CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, Uri httpProxy, bool skipCertificateValidation, Uri authorizationUrl, bool useStrictStatusCodeChecking, TimeSpan requestTimeout)
+        protected CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, IWebProxy httpProxy, bool skipCertificateValidation, Uri authorizationUrl, bool useStrictStatusCodeChecking, TimeSpan requestTimeout)
         {
             this.CloudTarget = cloudTarget;
             this.CancellationToken = cancellationToken;
@@ -114,7 +116,7 @@ namespace CloudFoundry.CloudController.Common
         /// <summary>
         /// Proxy
         /// </summary>
-        public Uri HttpProxy { get; protected set; }
+        public IWebProxy HttpProxy { get; protected set; }
 
         /// <summary>
         /// Skip Validation

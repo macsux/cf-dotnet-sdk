@@ -1,4 +1,6 @@
-﻿namespace CloudFoundry.Loggregator.Client
+﻿using System.Net;
+
+namespace CloudFoundry.Loggregator.Client
 {
     using System;
 
@@ -17,7 +19,7 @@
             get;
         }
 
-        void Open(Uri appLogEndpoint, string authenticationToken, Uri httpProxy, bool skipCertificateValidation);
+        void Open(Uri appLogEndpoint, string authenticationToken, IWebProxy httpProxy, bool skipCertificateValidation);
 
         void Close();
     }

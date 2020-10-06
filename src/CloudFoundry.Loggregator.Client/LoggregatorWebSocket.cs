@@ -1,4 +1,6 @@
-﻿namespace CloudFoundry.Loggregator.Client
+﻿using System.Net;
+
+namespace CloudFoundry.Loggregator.Client
 {
     using System;
     using System.Collections.Generic;
@@ -19,7 +21,7 @@
             get { throw new NotImplementedException(); }
         }
 
-        public void Open(Uri appLogEndpoint, string authenticationToken, Uri httpProxy, bool skipCertificateValidation)
+        public void Open(Uri appLogEndpoint, string authenticationToken, IWebProxy httpProxy, bool skipCertificateValidation)
         {
             // Dummy code to prevent warnings
             if (this.ErrorReceived != null)

@@ -1,3 +1,6 @@
+using System.Net;
+using CloudFoundry.UAA.Authentication;
+
 namespace CloudFoundry.CloudController.V2.Client
 {
     using System;
@@ -30,7 +33,7 @@ namespace CloudFoundry.CloudController.V2.Client
         /// <param name="cloudTarget">The cloud target.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <param name="httpProxy">The HTTP proxy.</param>
-        public CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, Uri httpProxy)
+        public CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, IWebProxy httpProxy)
             : this(cloudTarget, cancellationToken, httpProxy, false)
         {
         }
@@ -42,7 +45,7 @@ namespace CloudFoundry.CloudController.V2.Client
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <param name="httpProxy">The HTTP proxy.</param>
         /// <param name="skipCertificateValidation">if set to <c>true</c> it will skip TLS certificate validation for HTTP requests.</param>
-        public CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, Uri httpProxy, bool skipCertificateValidation) 
+        public CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, IWebProxy httpProxy, bool skipCertificateValidation) 
             : this(cloudTarget, cancellationToken, httpProxy, skipCertificateValidation, null)
         {
         }
@@ -55,7 +58,7 @@ namespace CloudFoundry.CloudController.V2.Client
         /// <param name="httpProxy">The HTTP proxy.</param>
         /// <param name="skipCertificateValidation">if set to <c>true</c> it will skip TLS certificate validation for HTTP requests.</param>
         /// <param name="authorizationUrl">Authorization Endpoint</param>
-        public CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, Uri httpProxy, bool skipCertificateValidation, Uri authorizationUrl)
+        public CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, IWebProxy httpProxy, bool skipCertificateValidation, Uri authorizationUrl)
             : this(cloudTarget, cancellationToken, httpProxy, skipCertificateValidation, authorizationUrl, false)
         {
         }
@@ -69,7 +72,7 @@ namespace CloudFoundry.CloudController.V2.Client
         /// <param name="skipCertificateValidation">if set to <c>true</c> it will skip TLS certificate validation for HTTP requests.</param>
         /// <param name="authorizationUrl">Authorization Endpoint</param>
         /// <param name="useStrictStatusCodeChecking">throw exception if the successful http status code returned from the server does not match the expected code</param>
-        public CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, Uri httpProxy, bool skipCertificateValidation, Uri authorizationUrl, bool useStrictStatusCodeChecking)
+        public CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, IWebProxy httpProxy, bool skipCertificateValidation, Uri authorizationUrl, bool useStrictStatusCodeChecking)
             : this(cloudTarget, cancellationToken, httpProxy, skipCertificateValidation, authorizationUrl, useStrictStatusCodeChecking, SimpleHttpClient.DefaultTimeout)
         {
         }
@@ -84,7 +87,7 @@ namespace CloudFoundry.CloudController.V2.Client
         /// <param name="authorizationUrl">Authorization Endpoint</param>
         /// <param name="useStrictStatusCodeChecking">throw exception if the successful http status code returned from the server does not match the expected code</param>
         /// <param name="requestTimeout">Http requests timeout</param>
-        public CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, Uri httpProxy, bool skipCertificateValidation, Uri authorizationUrl, bool useStrictStatusCodeChecking, TimeSpan requestTimeout)
+        public CloudFoundryClient(Uri cloudTarget, CancellationToken cancellationToken, IWebProxy httpProxy, bool skipCertificateValidation, Uri authorizationUrl, bool useStrictStatusCodeChecking, TimeSpan requestTimeout)
             : base(cloudTarget, cancellationToken, httpProxy, skipCertificateValidation, authorizationUrl, useStrictStatusCodeChecking, requestTimeout)
         {
         }
@@ -462,6 +465,67 @@ namespace CloudFoundry.CloudController.V2.Client
             return context;
         }
 
+        /// <summary>
+        /// Login using the specified raw token.
+        /// </summary>
+        /// <param name="accessToken">A raw token.</param>
+        /// <returns>Token Object</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1726:UsePreferredTerms", MessageId = "Login",
+            Justification = "Using the same nomenclature as Cloud Foundry (e.g. cf login)")]
+        public async Task<AuthenticationContext> LoginWithAccessToken(string accessToken)
+        {
+            if (this.AuthorizationEndpoint == null)
+            {
+                var info = await this.Info.GetInfo();
+
+                this.AuthorizationEndpoint = new Uri(string.Format(CultureInfo.InvariantCulture, "{0}{1}", info.AuthorizationEndpoint.TrimEnd('/'), "/oauth/token"));
+            }
+
+            this.UAAClient = new UAAClient(this.AuthorizationEndpoint, this.HttpProxy, this.SkipCertificateValidation);
+
+            var context = await this.UAAClient.Login(Token.FromAccessToken(accessToken));
+
+            if (context.IsLoggedIn)
+            {
+                //// Workaround for HCF. Some CC requests (e.g. dev role + bind route, update app, etc..) will fail the first time after login with 401.
+                //// Calling the CC's /v2/info endpoint will prevent this misbehavior.
+                await this.Info.GetInfo();
+            }
+
+            return context;
+        }
+        
+        /// <summary>
+        /// Login using the specified raw token.
+        /// </summary>
+        /// <param name="accessToken">A raw token.</param>
+        /// <returns>Token Object</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1726:UsePreferredTerms", MessageId = "Login",
+            Justification = "Using the same nomenclature as Cloud Foundry (e.g. cf login)")]
+        public async Task<AuthenticationContext> LoginWithPasscode(string passcode)
+        {
+            if (this.AuthorizationEndpoint == null)
+            {
+                var info = await this.Info.GetInfo();
+
+                this.AuthorizationEndpoint = new Uri(string.Format(CultureInfo.InvariantCulture, "{0}{1}", info.AuthorizationEndpoint.TrimEnd('/'), "/oauth/token"));
+            }
+
+            this.UAAClient = new UAAClient(this.AuthorizationEndpoint, this.HttpProxy, this.SkipCertificateValidation);
+
+            var context = await this.UAAClient.LoginWithPasscode(passcode);
+
+            if (context.IsLoggedIn)
+            {
+                //// Workaround for HCF. Some CC requests (e.g. dev role + bind route, update app, etc..) will fail the first time after login with 401.
+                //// Calling the CC's /v2/info endpoint will prevent this misbehavior.
+                await this.Info.GetInfo();
+            }
+
+            return context;
+        }
+        
+        
         /// <summary>
         /// Initializes all API Endpoints
         /// </summary>

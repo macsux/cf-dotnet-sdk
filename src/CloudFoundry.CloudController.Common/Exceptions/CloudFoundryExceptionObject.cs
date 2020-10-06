@@ -1,4 +1,5 @@
-﻿namespace CloudFoundry.CloudController.Common.Exceptions
+﻿
+namespace CloudFoundry.CloudController.Common.Exceptions
 {
     using Newtonsoft.Json;
 

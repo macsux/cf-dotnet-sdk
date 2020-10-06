@@ -1,4 +1,6 @@
-﻿namespace CloudFoundry.UAA
+﻿using System.Net;
+
+namespace CloudFoundry.UAA
 {
     using System;
     using System.Collections.Generic;
@@ -31,7 +33,7 @@
         /// </summary>
         /// <param name="authenticationUri">The authentication URI.</param>
         /// <param name="httpProxy">The HTTP proxy.</param>
-        public UAAClient(Uri authenticationUri, Uri httpProxy)
+        public UAAClient(Uri authenticationUri, IWebProxy httpProxy)
             : this(authenticationUri, httpProxy, false)
         {
         }
@@ -42,9 +44,9 @@
         /// <param name="authenticationUri">The authentication URI.</param>
         /// <param name="httpProxy">The HTTP proxy.</param>
         /// <param name="skipCertificateValidation">if set to <c>true</c> it will skip TLS certificate validation for HTTP requests.</param>
-        public UAAClient(Uri authenticationUri, Uri httpProxy, bool skipCertificateValidation)
+        public UAAClient(Uri authenticationUri, IWebProxy httpProxy, bool skipCertificateValidation)
         {
-            this.authentication = new ThinkTectureAuth(authenticationUri, httpProxy, skipCertificateValidation);
+            this.authentication = new IdentityModelAuth(authenticationUri, httpProxy, skipCertificateValidation);
             this.targetUri = authenticationUri;
         }
 
@@ -89,11 +91,42 @@
            Justification = "Using the same nomenclature as Cloud Foundry (e.g. cf login)")]
         public async Task<AuthenticationContext> Login(string refreshToken)
         {
-            var token = await this.authentication.Authenticate(refreshToken);
+            var token = await this.authentication.AuthenticateRefreshToken(refreshToken);
             this.context.Token = token;
             this.context.Uri = this.targetUri;
             this.context.IsLoggedIn = true;
             return this.context;
+        }
+        
+        /// <summary>
+        /// Logins the specified refresh token.
+        /// </summary>
+        /// <param name="passcode">The refresh token.</param>
+        /// <returns>A refresh Token</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1726:UsePreferredTerms", MessageId = "Login",
+            Justification = "Using the same nomenclature as Cloud Foundry (e.g. cf login)")]
+        public async Task<AuthenticationContext> LoginWithPasscode(string passcode)
+        {
+            var token = await this.authentication.AuthenticatePasscode(passcode);
+            this.context.Token = token;
+            this.context.Uri = this.targetUri;
+            this.context.IsLoggedIn = true;
+            return this.context;
+        }
+        
+        /// <summary>
+        /// Logins the specified refresh token.
+        /// </summary>
+        /// <param name="accessToken">The access token.</param>
+        /// <returns>A refresh Token</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1726:UsePreferredTerms", MessageId = "Login",
+            Justification = "Using the same nomenclature as Cloud Foundry (e.g. cf login)")]
+        public Task<AuthenticationContext> Login(Token accessToken)
+        {
+            this.context.Token = accessToken;
+            this.context.Uri = this.targetUri;
+            this.context.IsLoggedIn = true;
+            return Task.FromResult(this.context);
         }
 
         /// <summary>

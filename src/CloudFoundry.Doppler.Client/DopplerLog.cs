@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace CloudFoundry.Loggregator.Client
+namespace CloudFoundry.Doppler.Client
 {
     using System;
     using System.Collections.Generic;
@@ -10,47 +10,48 @@ namespace CloudFoundry.Loggregator.Client
     using System.Threading;
     using System.Threading.Tasks;
     using CloudFoundry.CloudController.Common.Http;
+    using DropsondeProtocol;
 
     /// <summary>
-    /// This is the Loggregator client. To use it, you need a Loggregator endpoint and an authorization token from UAA.
+    /// This is the Doppler client. To use it, you need a Doppler endpoint and an authorization token from UAA.
     /// </summary>
-    public class LoggregatorLog : IDisposable
+    public class DopplerLog : IDisposable
     {
         private bool disposed;
-        private ILoggregatorWebSocket webSocket;
-        private IProtobufSerializer protobufSerializer;
+        private DopplerWebSocket webSocket;
+        private ProtobufSerializer protobufSerializer;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="LoggregatorLog"/> class.
+        /// Initializes a new instance of the <see cref="DopplerLog"/> class.
         /// </summary>
-        /// <param name="loggregatorEndpoint">The Loggregator endpoint.</param>
+        /// <param name="dopplerEndpoint">The Doppler endpoint.</param>
         /// <param name="authenticationToken">The authentication token.</param>
-        public LoggregatorLog(Uri loggregatorEndpoint, string authenticationToken)
-            : this(loggregatorEndpoint, authenticationToken, null, false)
+        public DopplerLog(Uri dopplerEndpoint, string authenticationToken)
+            : this(dopplerEndpoint, authenticationToken, null, false)
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="LoggregatorLog"/> class.
+        /// Initializes a new instance of the <see cref="DopplerLog"/> class.
         /// </summary>
-        /// <param name="loggregatorEndpoint">The Loggregator endpoint.</param>
+        /// <param name="dopplerEndpoint">The Doppler endpoint.</param>
         /// <param name="authenticationToken">The authentication token.</param>
         /// <param name="httpProxy">The HTTP proxy.</param>
-        public LoggregatorLog(Uri loggregatorEndpoint, string authenticationToken, IWebProxy httpProxy)
-            : this(loggregatorEndpoint, authenticationToken, httpProxy, false)
+        public DopplerLog(Uri dopplerEndpoint, string authenticationToken, IWebProxy httpProxy)
+            : this(dopplerEndpoint, authenticationToken, httpProxy, false)
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="LoggregatorLog"/> class.
+        /// Initializes a new instance of the <see cref="DopplerLog"/> class.
         /// </summary>
-        /// <param name="loggregatorEndpoint">The Loggregator endpoint.</param>
+        /// <param name="dopplerEndpoint">The Doppler endpoint.</param>
         /// <param name="authenticationToken">The authentication token.</param>
         /// <param name="httpProxy">The HTTP proxy.</param>
         /// <param name="skipCertificateValidation">if set to <c>true</c> it will skip TLS certificate validation for HTTP requests.</param>
-        public LoggregatorLog(Uri loggregatorEndpoint, string authenticationToken, IWebProxy httpProxy, bool skipCertificateValidation)
+        public DopplerLog(Uri dopplerEndpoint, string authenticationToken, IWebProxy httpProxy, bool skipCertificateValidation)
         {
-            this.LoggregatorEndpoint = loggregatorEndpoint;
+            this.DopplerEndpoint = dopplerEndpoint;
             this.AuthenticationToken = authenticationToken;
             this.HttpProxy = httpProxy;
             this.SkipCertificateValidation = skipCertificateValidation;
@@ -59,38 +60,38 @@ namespace CloudFoundry.Loggregator.Client
         }
 
         /// <summary>
-        /// Finalizes an instance of the <see cref="LoggregatorLog"/> class.
+        /// Finalizes an instance of the <see cref="DopplerLog"/> class.
         /// </summary>
-        ~LoggregatorLog()
+        ~DopplerLog()
         {
             this.Dispose(false);
         }
 
         /// <summary>
-        /// Occurs when an error is received from Loggregator.
+        /// Occurs when an error is received from Doppler.
         /// </summary>
         public event EventHandler<ErrorEventArgs> ErrorReceived;
 
         /// <summary>
-        /// Occurs when a message is received from Loggregator.
+        /// Occurs when a message is received from Doppler.
         /// </summary>
         public event EventHandler<MessageEventArgs> MessageReceived;
 
         /// <summary>
-        /// Occurs when the Loggregator stream is closed.
+        /// Occurs when the Doppler stream is closed.
         /// </summary>
         public event EventHandler<EventArgs> StreamClosed;
 
         /// <summary>
-        /// Occurs when the Loggregator stream is opened. 
+        /// Occurs when the Doppler stream is opened. 
         /// </summary>
         public event EventHandler<EventArgs> StreamOpened;
 
         /// <summary>
-        /// Gets or sets the Loggregator endpoint.
+        /// Gets or sets the Doppler endpoint.
         /// You can get this using the CloudFoundry.CloudController.V2.Client.Info.GetV1Info method.
         /// </summary>
-        public Uri LoggregatorEndpoint
+        public Uri DopplerEndpoint
         {
             get;
             set;
@@ -125,7 +126,7 @@ namespace CloudFoundry.Loggregator.Client
         }
 
         /// <summary>
-        /// Gets the state of the connection to the Loggregator endpoint.
+        /// Gets the state of the connection to the Doppler endpoint.
         /// </summary>
         public ConnectionState State
         {
@@ -156,7 +157,7 @@ namespace CloudFoundry.Loggregator.Client
         }
 
         /// <summary>
-        /// Starts tailing logs from Loggregator for the specified app.
+        /// Starts tailing logs from Doppler for the specified app.
         /// </summary>
         /// <param name="appGuid">The Cloud Foundry app unique identifier.</param>
         /// <exception cref="System.ArgumentNullException">appGuid</exception>
@@ -172,12 +173,11 @@ namespace CloudFoundry.Loggregator.Client
                 throw new InvalidOperationException("The log stream has already been started.");
             }
 
-            UriBuilder appLogUri = new UriBuilder(this.LoggregatorEndpoint);
+            UriBuilder appLogUri = new UriBuilder(this.DopplerEndpoint);
 
-            appLogUri.Path = "tail/";
-            appLogUri.Query = string.Format(CultureInfo.InvariantCulture, "app={0}", appGuid);
+            appLogUri.Path = string.Format(CultureInfo.InvariantCulture, "/apps/{0}/stream", appGuid); ;
 
-            this.webSocket = new LoggregatorWebSocket();
+            this.webSocket = new DopplerWebSocket();
 
             this.webSocket.DataReceived += this.WebSocketMessageReceived;
             this.webSocket.ErrorReceived += this.WebSocketError;
@@ -194,14 +194,14 @@ namespace CloudFoundry.Loggregator.Client
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <exception cref="System.ArgumentNullException">appGuid</exception>
         /// <returns></returns>
-        public async Task<ApplicationLog[]> Recent(string appGuid, CancellationToken cancellationToken)
+        public async Task<Envelope[]> Recent(string appGuid, CancellationToken cancellationToken)
         {
             if (appGuid == null)
             {
                 throw new ArgumentNullException("appGuid");
             }
 
-            UriBuilder appLogUri = new UriBuilder(this.LoggregatorEndpoint);
+            UriBuilder appLogUri = new UriBuilder(this.DopplerEndpoint);
 
             if (appLogUri.Scheme == "ws")
             {
@@ -212,8 +212,7 @@ namespace CloudFoundry.Loggregator.Client
                 appLogUri.Scheme = "https";
             }
 
-            appLogUri.Path = "recent";
-            appLogUri.Query = string.Format(CultureInfo.InvariantCulture, "app={0}", appGuid);
+            appLogUri.Path = string.Format(CultureInfo.InvariantCulture, "/apps/{0}/recentlogs", appGuid);
 
             SimpleHttpClient client = new SimpleHttpClient(cancellationToken);
             client.Uri = appLogUri.Uri;
@@ -226,7 +225,7 @@ namespace CloudFoundry.Loggregator.Client
             if (response.StatusCode != System.Net.HttpStatusCode.OK)
             {
                 string errorMessage = await response.ReadContentAsStringAsync();
-                throw new LoggregatorException(string.Format(CultureInfo.InvariantCulture, "Server returned error code {0} with message: '{1}'", response.StatusCode, errorMessage));
+                throw new DopplerException(string.Format(CultureInfo.InvariantCulture, "Server returned error code {0} with message: '{1}'", response.StatusCode, errorMessage));
             }
 
             MultipartMemoryStreamProvider multipart = null;
@@ -239,7 +238,7 @@ namespace CloudFoundry.Loggregator.Client
                 // There are no recent Logs. We need to investigate a better way for handling this
                 if (multipartException.Message.Contains("MIME multipart message is not complete"))
                 {
-                    return new ApplicationLog[] { new ApplicationLog() { Message = "(Server did not return any recent logs)" } };
+                    return new Envelope[] { };
                 }
                 else
                 {
@@ -247,10 +246,10 @@ namespace CloudFoundry.Loggregator.Client
                 }
             }
 
-            List<ApplicationLog> messages = new List<ApplicationLog>();
+            var messages = new List<Envelope>();
             foreach (var msg in multipart.Contents)
             {
-                messages.Add(this.protobufSerializer.DeserializeApplicationLog(await msg.ReadAsByteArrayAsync()));
+                messages.Add(this.protobufSerializer.DeserializeEnvelope(await msg.ReadAsByteArrayAsync()));
             }
 
             return messages.ToArray();

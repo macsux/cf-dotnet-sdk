@@ -1,3 +1,6 @@
+/TestHarness/**
+/artifacts/**
+/.idea/**
 # Ignore output directory
 /lib/
 
